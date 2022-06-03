@@ -5,7 +5,6 @@ import sys
 sys.path.append('../src')
 import csv
 from supportfunctions import *
-sys.stdout.flush()
 import petsc4py
 petsc4py.init(sys.argv)
 from petsc4py import PETSc
@@ -16,7 +15,7 @@ from scipy.sparse import csr_matrix
 from datetime import datetime
 from solver import solver_3d
 import argparse
-
+import pdb
 
 parser = argparse.ArgumentParser(description="Set damage curvature value.")
 parser.add_argument("--gamma", type=int, help="Value of gamma_3")
@@ -64,18 +63,18 @@ beta_f = 1.86 / 1000
 
 # Grids Specification
 # Coarse Grids
-Y_min = 0.00
+Y_min = 1e-8
 Y_max = 3.00
 # range of capital
 K_min = 4.00
 K_max = 8.50
 R_min = 0.14
-R_max = 0.60
+R_max = 0.99
 # R_max = 0.50
 # hR = 0.05
 hK = 0.10
 hR = 0.01
-hY = 0.10 # make sure it is float instead of int
+hY = 0.05 # make sure it is float instead of int
 
 # R = np.arange(R_min, R_max + hR, hR)
 # nR = len(R)
@@ -91,6 +90,7 @@ now = datetime.now()
 current_time = now.strftime("%d-%H:%M")
 filename =  "Ag-" + str(A_g) + "-" + "gamma" + '-' + str(gamma_3) + '-' + "{}".format(current_time)
 
+# sys.stdout = open("LOG_{:.4f}.log".format(gamma_3), 'w')
 
 print("Grid dimension: [{}, {}, {}]\n".format(nK, nR, nY))
 # Discretization of the state space for numerical PDE solution.
@@ -99,33 +99,64 @@ print("Grid dimension: [{}, {}, {}]\n".format(nK, nR, nY))
 stateSpace = np.hstack([K_mat.reshape(-1,1,order = 'F'), R_mat.reshape(-1,1,order = 'F'), Y_mat.reshape(-1, 1, order='F')])
 
 # For PETSc
-K_mat_1d =K_mat.ravel(order='F')
-R_mat_1d = R_mat.ravel(order='F')
-Y_mat_1d = Y_mat.ravel(order='F')
+K_mat_1d  = K_mat.ravel(order='F')
+R_mat_1d  = R_mat.ravel(order='F')
+Y_mat_1d  = Y_mat.ravel(order='F')
 lowerLims = np.array([K_min, R_min, Y_min], dtype=np.float64)
 upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
 # import pickle
-# data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.037037037037037035-11-16:42", "rb"))
+# data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.3333333333333333-01-16:50", "rb"))
 # v0 = data["v0"]
 ############# step up of optimization
 FC_Err = 1
 epoch = 0
 tol = 1e-7
-epsilon  = 0.005
-fraction = 0.005
+epsilon  = 0.01
+fraction = 0.01
 
-# csvfile = open("ResForRatio.csv", "w")
-# fieldnames = ["epoch", "iterations", "residual norm", "PDE_Err", "FC_Err"]
-# writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-# writer.writeheader()
-max_iter = 5000
+csvfile = open("HJB_3D_{:.3f}_{}.csv".format(gamma_3, current_time), "w")
+fieldnames = [
+        "epoch", 
+        "iterations", 
+        "residual norm", 
+        "PDE_Err", 
+        "FC_Err", 
+        "id_min",
+        "id_max",
+        "ig_min",
+        "ig_max",
+        "DELTA_min",
+        "DELTA_max",
+        "multi_1_min",
+        "multi_1_max",
+        "multi_2_min",
+        "multi_2_max",
+        "aa_min",
+        "aa_max",
+        "bb_min",
+        "bb_max",
+        "AA_min",
+        "AA_max",
+        "BB_min",
+        "BB_max",
+        "CC_min",
+        "CC_max",
+        ]
+
+writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+writer.writeheader()
+max_iter = 10000
+
 id_star = np.zeros_like(K_mat)
 ig_star = np.zeros_like(K_mat)
-id_star = data["id_star"]
-ig_star = data["ig_star"]
+# id_star = data["id_star"]
+# ig_star = data["ig_star"]
+
+continue_mode = True
+
 # file_iter = open("iter_c_compile.txt", "w")
 
 # res = solver_3d(K_mat, R_mat, Y_mat, # FOC_func, Coeff_func,  
@@ -165,44 +196,61 @@ while FC_Err > tol and epoch < max_iter:
 
     # update control
     if epoch == 0:
+        
+        if continue_mode:
+            i_d = id_star
+            i_g = ig_star
         # # pass
         # fraction = 1
     # else:
         # # pass
         # fraction = 0.5
-        i_d = np.zeros(K_mat.shape)
-        i_g = np.zeros(R_mat.shape)
-        consumption_0 = A_d * (1 - R_mat) + A_g * R_mat
-        consumption = consumption_0
-        mc = delta / consumption
-        i_d = 1 -  mc / (dK - R_mat *  dR)
-        i_d /= phi_d
-        i_d[i_d < 0] = 0
-        # i_d[i_d > A_d] = A_d
-        i_g = 1 - mc / (dK + (1 - R_mat) * dR)
-        i_g /= phi_g
-        # i_g[i_g < 0] = 0
-        # i_g[i_g > A_g] = A_g
-        q = delta * ((A_g * R_mat - i_g * R_mat) + (A_d * (1 - R_mat) - i_d * (1 - R_mat))) ** (-1)
+        else:
+            i_d = np.zeros(K_mat.shape)
+            i_g = np.zeros(R_mat.shape)
+            consumption_0 = A_d * (1 - R_mat) + A_g * R_mat
+            consumption = consumption_0
+            mc = delta / consumption
+            i_d = 1 -  mc / (dK - R_mat *  dR)
+            i_d /= phi_d
+            i_d[i_d < 0] = 0
+            # i_d[i_d > A_d] = A_d
+            i_g = 1 - mc / (dK + (1 - R_mat) * dR)
+            i_g /= phi_g
+            # i_g[i_g < 0] = 0
+            # i_g[i_g > A_g] = A_g
+            q = delta * ((A_g * R_mat - i_g * R_mat) + (A_d * (1 - R_mat) - i_d * (1 - R_mat))) ** (-1)
+        # DELTA = np.zeros_like(K_mat)
 
     else:
+        pass
 
-        multi_1 = dK + (1 - R_mat) * R_mat
-        multi_2 = dK - R_mat * dR
 
-        multi_2[multi_2 <= 1e-8] = 1e-8
+    multi_1 = dK + (1 - R_mat) * dR
+    multi_2 = dK - R_mat * dR
 
-        aa = (1 - multi_1 / multi_2) / phi_d
-        bb = phi_g / phi_d * multi_1 / multi_2
+    # if multi_2.any() <= 0:
+        # import pdb; pdb.set_trace()
 
-        AA = phi_g * ((1 - R_mat) * bb + R_mat)
-        BB = phi_g * ((1 - R_mat) * A_d + R_mat * A_g - (1 - R_mat) * aa) + (1 - R_mat) * bb + R_mat
-        CC = (1 - R_mat) * A_d + R_mat * A_g - (1 - R_mat) * aa - delta / multi_1
-        DELTA = BB**2 - 4 * AA * CC
-        DELTA[DELTA <= 0] = 0
-        i_g_new = (BB - np.sqrt(DELTA)) / (2 * AA)
-        # i_g[i_g <= 0] = (BB[i_g <= 0] + np.sqrt(DELTA[i_g<=0])) / (2 * AA[i_g <= 0])
-        i_d_new = aa + bb * i_g_new
+    multi_2[multi_2 <= 1e-8] = 1e-8
+
+    aa = (1 - multi_1 / multi_2) / phi_d
+    bb = phi_g / phi_d * multi_1 / multi_2
+
+    AA = phi_g * ((1 - R_mat) * bb + R_mat)
+    BB = phi_g * ((1 - R_mat) * A_d + R_mat * A_g - (1 - R_mat) * aa) + (1 - R_mat) * bb + R_mat
+    CC = (1 - R_mat) * A_d + R_mat * A_g - (1 - R_mat) * aa - delta / multi_1
+    DELTA = BB**2 - 4 * AA * CC
+
+    print(DELTA.min(), DELTA.max())
+
+    if DELTA.any() <= 0:
+        import pdb; pdb.set_trace()
+
+    # DELTA[DELTA <= 0] = 0
+    i_g_new = (BB - np.sqrt(DELTA)) / (2 * AA)
+    # i_g[i_g <= 0] = (BB[i_g <= 0] + np.sqrt(DELTA[i_g<=0])) / (2 * AA[i_g <= 0])
+    i_d_new = aa + bb * i_g_new
 
 
     
@@ -210,9 +258,9 @@ while FC_Err > tol and epoch < max_iter:
 
     # mc = delta / ((A_d - id_star) * (1 - R_mat) + (A_g - ig_star) * R_mat)
     # i_d_new = (1 - mc / (-dR * R_mat + dK)) / phi_d
-        i_d = i_d_new * fraction + id_star * (1 - fraction)
+    i_d = i_d_new * fraction + id_star * (1 - fraction)
     # i_g_new = (1 - mc / (dR * (1 - R_mat) + dK)) / phi_g
-        i_g = i_g_new * fraction + ig_star * (1 - fraction)
+    i_g = i_g_new * fraction + ig_star * (1 - fraction)
      # # updating controls
         # Converged = 0
         # num = 0
@@ -248,12 +296,16 @@ while FC_Err > tol and epoch < max_iter:
     # i_g[i_g >= A_g] = A_g - 1e-8
     # i_d = np.zeros(K_mat.shape)
     # i_g = np.zeros(R_mat.shape)
+    i_d_min_new = i_d.min()
     # i_d[i_d <= -1 + 1e-15] = -1 + 1e-15
     # i_g[i_g <= -1 + 1e-15] = -1 + 1e-15
     # i_d[i_d >= 1 - 1e-15] = 1 - 1e-15
     # i_g[i_g >= 1 - 1e-15] = 1 - 1e-15
+
     i_d[i_d < 0] = 0
     i_g[i_g < 0] = 0
+    # i_g[i_g >= A_g - 1e-18] = A_g - 1e-18
+
     print("min id: {:.12f};\t max ig: {:.12f}\t".format(np.min(i_d), np.min(i_g)) )
     print("max id: {:.12f};\t max ig: {:.12f}\t".format(np.max(i_d), np.max(i_g)))
     consumption = (A_d -i_d) * (1 - R_mat) + (A_g - i_g) * R_mat
@@ -464,14 +516,34 @@ while FC_Err > tol and epoch < max_iter:
             print("Epoch {:d} (PETSc): PDE Error: {:.10f}; False Transient Error: {:.10f}" .format(epoch, PDE_Err, FC_Err))
     print("Epoch time: {:.4f}".format(time.time() - start_ep))
     # step 9: keep iterating until convergence
-    # rowcontent = {
-        # "epoch": epoch,
-        # "iterations": num_iter,
-        # "residual norm": ksp.getResidualNorm(),
-        # "PDE_Err": PDE_Err,
-        # "FC_Err": FC_Err
-    # }
-    # writer.writerow(rowcontent)
+    rowcontent = {
+        "epoch": epoch,
+        "iterations": num_iter,
+        "residual norm": ksp.getResidualNorm(),
+        "PDE_Err": PDE_Err,
+        "FC_Err": FC_Err,
+        "id_min": i_d_min_new,
+        "id_max": i_d.max(),
+        "ig_min": i_g.min(),
+        "ig_max": i_g.max(),
+        "DELTA_min": DELTA.min(),
+        "DELTA_max": DELTA.max(),
+        "multi_1_min": multi_1.min(),
+        "multi_1_max": multi_1.max(),
+        "multi_2_min": multi_2.min(),
+        "multi_2_max": multi_2.max(),
+        "aa_min": aa.min(),
+        "aa_max": aa.max(),
+        "bb_min": bb.min(),
+        "bb_max": bb.max(),
+        "AA_min": AA.min(),
+        "AA_max": AA.max(),
+        "BB_min": BB.min(),
+        "BB_max": BB.max(),
+        "CC_min": CC.min(),
+        "CC_max": CC.max()
+    }
+    writer.writerow(rowcontent)
     id_star = i_d
     ig_star = i_g
     v0 = out_comp
@@ -503,3 +575,5 @@ for key in dir():
 file = open("../data/PostJump/" + filename, 'wb')
 pickle.dump(my_shelf, file)
 file.close()
+
+sys.stdout.close()

@@ -79,9 +79,8 @@ Make sure to change the environment variables `PETSC_DIR` and `PETSC_ARCH` to th
 
 3. Configure again with: 
 
-```
-  $ ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-shared-libraries --with-petsc4py
-  $ make all check 
+``./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-shared-libraries --with-petsc4py
+  make all check 
 ```
 
 
