@@ -107,9 +107,9 @@ upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
-# import pickle
-# data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.3333333333333333-01-16:50", "rb"))
-# v0 = data["v0"]
+import pickle
+data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.037037037037037035-06-14:45", "rb"))
+v0 = data["v0"]
 ############# step up of optimization
 FC_Err = 1
 epoch = 0
@@ -144,6 +144,10 @@ fieldnames = [
         "BB_max",
         "CC_min",
         "CC_max",
+        "dK_min",
+        "dK_max",
+        "dR_min",
+        "dR_max",
         ]
 
 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -152,8 +156,8 @@ max_iter = 10000
 
 id_star = np.zeros_like(K_mat)
 ig_star = np.zeros_like(K_mat)
-# id_star = data["id_star"]
-# ig_star = data["ig_star"]
+id_star = data["id_star"]
+ig_star = data["ig_star"]
 
 continue_mode = True
 
@@ -178,7 +182,7 @@ while FC_Err > tol and epoch < max_iter:
     # Applying finite difference scheme to the value function
     ######## first order
     dK = finiteDiff(v0,0,1,hK)
-    # dK[dK < 1e-16] = 1e-16
+    # dK[dK <= 1e-14] = 1e-14
     dR = finiteDiff(v0,1,1,hR)
     # dR[dR < 1e-8] = 1e-8
     dY = finiteDiff(v0,2,1,hY)
@@ -229,10 +233,23 @@ while FC_Err > tol and epoch < max_iter:
     multi_1 = dK + (1 - R_mat) * dR
     multi_2 = dK - R_mat * dR
 
-    # if multi_2.any() <= 0:
-        # import pdb; pdb.set_trace()
+    dK_min = dK.min()
+    dK_max = dK.max()
+    dR_min = dR.min()
+    dR_max = dR.max()
 
-    multi_2[multi_2 <= 1e-8] = 1e-8
+    multi_2_min = multi_2.min()
+    multi_2_max = multi_2.max()
+
+    print("dK min: {};\t dK max: {}\t".format(dK_min, dK_max))
+    print("dR min: {};\t dR max: {}\t".format(dR_min, dR_max))
+
+    print("m2 min: {};\t m2 max: {}\t".format(multi_2_min, multi_2_max))
+
+    if multi_2.any() <= 0:
+        import pdb; pdb.set_trace()
+
+    multi_2[multi_2 <= 0.001] = 0.001
 
     aa = (1 - multi_1 / multi_2) / phi_d
     bb = phi_g / phi_d * multi_1 / multi_2
@@ -242,7 +259,7 @@ while FC_Err > tol and epoch < max_iter:
     CC = (1 - R_mat) * A_d + R_mat * A_g - (1 - R_mat) * aa - delta / multi_1
     DELTA = BB**2 - 4 * AA * CC
 
-    print(DELTA.min(), DELTA.max())
+    print("DELTA min: {}\t; DELTA max: {}\t".format(DELTA.min(), DELTA.max()))
 
     if DELTA.any() <= 0:
         import pdb; pdb.set_trace()
@@ -290,8 +307,9 @@ while FC_Err > tol and epoch < max_iter:
         # print(diff)
     # i_d[i_d >= A_d] = A_d - 1e-15
     # i_g[i_g >= A_g] = A_g - 1e-8
-    print(np.min(i_d), np.min(i_g))
-    print(np.max(i_d), np.max(i_g))
+    print("Before 1e-14 constraint:")
+    print("id min: {}\t; id max: {}\t".format(np.min(i_d), np.max(i_d)))
+    print("ig min: {}\t; ig max: {}\t".format(np.min(i_g), np.max(i_g)))
     # i_d[i_d >= A_d] = A_d - 1e-15
     # i_g[i_g >= A_g] = A_g - 1e-8
     # i_d = np.zeros(K_mat.shape)
@@ -299,17 +317,17 @@ while FC_Err > tol and epoch < max_iter:
     i_d_min_new = i_d.min()
     # i_d[i_d <= -1 + 1e-15] = -1 + 1e-15
     # i_g[i_g <= -1 + 1e-15] = -1 + 1e-15
-    # i_d[i_d >= 1 - 1e-15] = 1 - 1e-15
-    # i_g[i_g >= 1 - 1e-15] = 1 - 1e-15
+    i_d[i_d >= phi_d - 1e-15] = 1 / phi_d - 1e-15
+    i_g[i_g >= phi_g - 1e-15] = 1 / phi_g - 1e-15
 
-    i_d[i_d < 0] = 0
-    i_g[i_g < 0] = 0
+    i_d[i_d < 1e-14] = 1e-14
+    i_g[i_g < 1e-14] = 1e-14
     # i_g[i_g >= A_g - 1e-18] = A_g - 1e-18
-
+    print("After 1e-14 constraint:")
     print("min id: {:.12f};\t max ig: {:.12f}\t".format(np.min(i_d), np.min(i_g)) )
     print("max id: {:.12f};\t max ig: {:.12f}\t".format(np.max(i_d), np.max(i_g)))
     consumption = (A_d -i_d) * (1 - R_mat) + (A_g - i_g) * R_mat
-    consumption[consumption < 1e-18] = 1e-18
+    consumption[consumption < 1e-14] = 1e-14
     print("min consum: {:.12f};\t max consum: {:.12f}\t".format(np.min(consumption), np.max(consumption)))
     # i_d[i_d >= A_d] = A_d - 1e-8
     # i_g[i_g >= A_g] = A_g - 1e-8
@@ -530,8 +548,8 @@ while FC_Err > tol and epoch < max_iter:
         "DELTA_max": DELTA.max(),
         "multi_1_min": multi_1.min(),
         "multi_1_max": multi_1.max(),
-        "multi_2_min": multi_2.min(),
-        "multi_2_max": multi_2.max(),
+        "multi_2_min": multi_2_min,
+        "multi_2_max": multi_2_max,
         "aa_min": aa.min(),
         "aa_max": aa.max(),
         "bb_min": bb.min(),
@@ -541,7 +559,11 @@ while FC_Err > tol and epoch < max_iter:
         "BB_min": BB.min(),
         "BB_max": BB.max(),
         "CC_min": CC.min(),
-        "CC_max": CC.max()
+        "CC_max": CC.max(),
+        "dK_min": dK.min(),
+        "dK_max": dK.max(),
+        "dR_min": dR.min(),
+        "dR_max": dR.max(),
     }
     writer.writerow(rowcontent)
     id_star = i_d
