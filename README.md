@@ -58,35 +58,50 @@ For Vagrant:
 
 To run PETSc with `Python` we also need `Python` bindings provided by the `petsc4py` package. To install `petsc4py` and properly configure PETSc to work with `Python` follow these steps:
 
-1. In the folder where PETSc download folder run the following configuration command: 
+1. For maintainance convenience, choose a name for the arch you will be configuring. In the folder where PETSc download folder run the following configuration command:
 
 ```
-  $ ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-shared-libraries`
-  $ make all check
+ ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-petsc4py --with-debugging=no PETSC_ARCH=yourchoiceofarchname`
+```
+Following the steps suggested by the configuration output:
+```
+make PETSC_ARCH=yourchoiceofarchname all
+```
+And complete the make check following the instruction
+```
+make PETSC_ARCH=yourchoiceofarchname check
 ```
 
-2. Install `petsc4py` following the official [documentation](https://github.com/erdc/petsc4py/blob/master/docs/source/install.rst).
 
-The relevant part is: 
+2. Store environmental variables. A useful step is to check which file are loaded when you start a shell session using the following command:
 
 ```
-  $ export PETSC_DIR=/path/to/petsc
-  $ export PETSC_ARCH=arch-linux2-c-opt
-  $ pip install petsc4py
+echo exit | strace bash -li |& grep '^open'
+```
+
+The output will tell you whether `~/.bashrc` and/or `~/.bash_profile` and/or `~/.profile` are loaded.
+Suppose `~/.bashrc` are load when you start a bash session. Use the following command to store the environmental variables.
+
+```
+  echo 'export PETSC_DIR=/path/to/petsc' >> ~/.bashrc
+  echo 'export PETSC_ARCH=yourchoiceofarchname' >> ~/.bashrc
+  echo `export PYTHONPATH=$PETSC_DIR/$PETSC_ARCH/lib` >> ~/.bashrc
 ```
 
 Make sure to change the environment variables `PETSC_DIR` and `PETSC_ARCH` to the ones obtained from the configuration command above (they are printed out on the terminal feed).
 
-3. Configure again with: 
-
-``./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-shared-libraries --with-petsc4py
-  make all check 
+3. Check if the configuration is successful: 
 ```
-
-
-
-
-
+exec $SHELL
+echo $PETSC_DIR
+echo $PETSC_ARCH
+echo $PYTHONPATH
+```
+to see if the outputs are correct. and
+```
+pip list
+```
+to see if `petsc4py` has been installed successfully.
 
 
 

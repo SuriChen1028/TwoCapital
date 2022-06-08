@@ -19,6 +19,10 @@ import pdb
 
 parser = argparse.ArgumentParser(description="Set damage curvature value.")
 parser.add_argument("--gamma", type=int, help="Value of gamma_3")
+parser.add_argument("--eta", type=float, help="Value of eta", default=0.17)
+parser.add_argument("--epsilon", type=float, help="Value of epsilon", default=0.1)
+parser.add_argument("--fraction", type=float, help="Value of fraction of control update", default=0.1)
+parser.add_argument("--keep-log", default=False, action="store_true", help="Flag to keep a log of the computation")
 args = parser.parse_args()
 
 
@@ -49,7 +53,7 @@ varsigma = 1.2 * 1.86 / 1000
 phi_d = 8.
 phi_g = 8.
 ########## Scaling factor
-eta = 0.17
+eta = args.eta
 
 
 ###### damage
@@ -70,27 +74,30 @@ K_min = 4.00
 K_max = 8.50
 R_min = 0.14
 R_max = 0.99
-# R_max = 0.50
-# hR = 0.05
 hK = 0.10
 hR = 0.01
 hY = 0.05 # make sure it is float instead of int
 
 # R = np.arange(R_min, R_max + hR, hR)
 # nR = len(R)
-Y = np.arange(Y_min, Y_max + hY, hY)
-nY = len(Y)
 K = np.arange(K_min, K_max + hK, hK)
 nK = len(K)
 R = np.arange(R_min, R_max + hR, hR)
 nR = len(R)
-# lam = np.arange(lam_min, lam_max + hlam, hlam)
-# nlam = len(lam)
+Y = np.arange(Y_min, Y_max + hY, hY)
+nY = len(Y)
+
 now = datetime.now()
 current_time = now.strftime("%d-%H:%M")
-filename =  "Ag-" + str(A_g) + "-" + "gamma" + '-' + str(gamma_3) + '-' + "{}".format(current_time)
 
-# sys.stdout = open("LOG_{:.4f}.log".format(gamma_3), 'w')
+dirname  = "eta_{:.4f}".format(eta)
+if not os.path.exists("../data/PostJump/" + dirname):
+    os.mkdir("../data/PostJump/" + dirname + "/")
+
+filename =  "Ag-" + str(A_g) + "-" + "gamma-{:.4f}".format(gamma_3)  + "-{}".format(current_time)
+
+if args.keep_log:
+    sys.stdout = open("../data/PostJump/eta_{:.4f}/LOG_gamma_{:.4f}_eta_{:.3f}.log".format(eta, gamma_3, eta), 'w')
 
 print("Grid dimension: [{}, {}, {}]\n".format(nK, nR, nY))
 # Discretization of the state space for numerical PDE solution.
@@ -107,15 +114,15 @@ upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
-import pickle
-data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.037037037037037035-06-14:45", "rb"))
-v0 = data["v0"]
+# import pickle
+# data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.037037037037037035-07-14:35", "rb"))
+# v0 = data["v0"]
 ############# step up of optimization
-FC_Err = 1
-epoch = 0
-tol = 1e-7
-epsilon  = 0.01
-fraction = 0.01
+FC_Err   = 1
+epoch    = 0
+tol      = 1e-7
+epsilon  = args.epsilon
+fraction = args.fraction
 
 csvfile = open("HJB_3D_{:.3f}_{}.csv".format(gamma_3, current_time), "w")
 fieldnames = [
@@ -156,8 +163,8 @@ max_iter = 10000
 
 id_star = np.zeros_like(K_mat)
 ig_star = np.zeros_like(K_mat)
-id_star = data["id_star"]
-ig_star = data["ig_star"]
+# id_star = data["id_star"]
+# ig_star = data["ig_star"]
 
 continue_mode = True
 
@@ -182,9 +189,9 @@ while FC_Err > tol and epoch < max_iter:
     # Applying finite difference scheme to the value function
     ######## first order
     dK = finiteDiff(v0,0,1,hK)
-    # dK[dK <= 1e-14] = 1e-14
+    dK[dK <= 1e-14] = 1e-14
     dR = finiteDiff(v0,1,1,hR)
-    # dR[dR < 1e-8] = 1e-8
+    # dR[dR <= 1e-14] = 1e-14
     dY = finiteDiff(v0,2,1,hY)
     ######## second order
     ddK = finiteDiff(v0,0,2,hK)
@@ -249,7 +256,7 @@ while FC_Err > tol and epoch < max_iter:
     if multi_2.any() <= 0:
         import pdb; pdb.set_trace()
 
-    multi_2[multi_2 <= 0.001] = 0.001
+    multi_2[multi_2 <= 0.0001] = 0.0001
 
     aa = (1 - multi_1 / multi_2) / phi_d
     bb = phi_g / phi_d * multi_1 / multi_2
@@ -266,18 +273,11 @@ while FC_Err > tol and epoch < max_iter:
 
     # DELTA[DELTA <= 0] = 0
     i_g_new = (BB - np.sqrt(DELTA)) / (2 * AA)
-    # i_g[i_g <= 0] = (BB[i_g <= 0] + np.sqrt(DELTA[i_g<=0])) / (2 * AA[i_g <= 0])
     i_d_new = aa + bb * i_g_new
 
-
-    
-
-
-    # mc = delta / ((A_d - id_star) * (1 - R_mat) + (A_g - ig_star) * R_mat)
-    # i_d_new = (1 - mc / (-dR * R_mat + dK)) / phi_d
     i_d = i_d_new * fraction + id_star * (1 - fraction)
-    # i_g_new = (1 - mc / (dR * (1 - R_mat) + dK)) / phi_g
     i_g = i_g_new * fraction + ig_star * (1 - fraction)
+    # ########## Updating mc ###################################
      # # updating controls
         # Converged = 0
         # num = 0
@@ -305,32 +305,26 @@ while FC_Err > tol and epoch < max_iter:
         # print(np.max(abs(i_g_1 - i_g)) , np.max(abs(i_d_1 - i_d)))
 
         # print(diff)
-    # i_d[i_d >= A_d] = A_d - 1e-15
-    # i_g[i_g >= A_g] = A_g - 1e-8
     print("Before 1e-14 constraint:")
     print("id min: {}\t; id max: {}\t".format(np.min(i_d), np.max(i_d)))
     print("ig min: {}\t; ig max: {}\t".format(np.min(i_g), np.max(i_g)))
-    # i_d[i_d >= A_d] = A_d - 1e-15
-    # i_g[i_g >= A_g] = A_g - 1e-8
     # i_d = np.zeros(K_mat.shape)
     # i_g = np.zeros(R_mat.shape)
     i_d_min_new = i_d.min()
-    # i_d[i_d <= -1 + 1e-15] = -1 + 1e-15
-    # i_g[i_g <= -1 + 1e-15] = -1 + 1e-15
-    i_d[i_d >= phi_d - 1e-15] = 1 / phi_d - 1e-15
-    i_g[i_g >= phi_g - 1e-15] = 1 / phi_g - 1e-15
+    i_d[i_d >= 1 / phi_d - 1e-14] = 1 / phi_d - 1e-14
+    i_g[i_g >= 1 / phi_g - 1e-14] = 1 / phi_g - 1e-14
 
-    i_d[i_d < 1e-14] = 1e-14
-    i_g[i_g < 1e-14] = 1e-14
-    # i_g[i_g >= A_g - 1e-18] = A_g - 1e-18
+    # i_d[i_d <= 1e-14] = 1e-14
+    # i_g[i_g <= 1e-14] = 1e-14
+    # i_d[i_d >= A_d - 1e-14] = A_d - 1e-14
+    # i_g[i_g >= A_g - 1e-14] = A_g - 1e-14
     print("After 1e-14 constraint:")
     print("min id: {:.12f};\t max ig: {:.12f}\t".format(np.min(i_d), np.min(i_g)) )
     print("max id: {:.12f};\t max ig: {:.12f}\t".format(np.max(i_d), np.max(i_g)))
     consumption = (A_d -i_d) * (1 - R_mat) + (A_g - i_g) * R_mat
-    consumption[consumption < 1e-14] = 1e-14
+    consumption[consumption <= 1e-14] = 1e-14
     print("min consum: {:.12f};\t max consum: {:.12f}\t".format(np.min(consumption), np.max(consumption)))
-    # i_d[i_d >= A_d] = A_d - 1e-8
-    # i_g[i_g >= A_g] = A_g - 1e-8
+
     # Step (2), solve minimization problem in HJB and calculate drift distortion
     # See remark 2.1.3 for more details
     start_time2 = time.time()
@@ -369,7 +363,7 @@ while FC_Err > tol and epoch < max_iter:
                 diag_0_base = A_1d[:]
                 diag_0_base += (I_LB_d * C_dd_1d[:] + I_UB_d * C_dd_1d[:] - 2 * (1 - I_LB_d - I_UB_d) * C_dd_1d[:]) / dVec[0] ** 2
                 diag_0_base += (I_LB_g * C_gg_1d[:] + I_UB_g * C_gg_1d[:] - 2 * (1 - I_LB_g - I_UB_g) * C_gg_1d[:]) / dVec[1] ** 2
-                diag_0_base += (I_LB_K * C_kk_1d[:] + I_UB_K * C_kk_1d[:] - 2 * (1 - I_LB_K - I_UB_K) * C_kk_1d[:]) / dVec[2] ** 2
+                diag_0_base += (I_LB_y * C_yy_1d[:] + I_UB_y * C_yy_1d[:] - 2 * (1 - I_LB_y - I_UB_y) * C_yy_1d[:]) / dVec[2] ** 2
                 diag_d_base = - 2 * I_LB_d * C_dd_1d[:] / dVec[0] ** 2 + (1 - I_LB_d - I_UB_d) * C_dd_1d[:] / dVec[0] ** 2
                 diag_dm_base = - 2 * I_UB_d * C_dd_1d[:] / dVec[0] ** 2 + (1 - I_LB_d - I_UB_d) * C_dd_1d[:] / dVec[0] ** 2
                 diag_g_base = - 2 * I_LB_g * C_gg_1d[:] / dVec[1] ** 2 + (1 - I_LB_g - I_UB_g) * C_gg_1d[:] / dVec[1] ** 2
@@ -418,9 +412,9 @@ while FC_Err > tol and epoch < max_iter:
         # profiling
         # bpoint2 = time.time()
         # print("reshape: {:.3f}s".format(bpoint2 - bpoint1))
-        diag_0 = diag_0_base - 1 / epsilon + I_LB_R * B_r_1d[:] / -dVec[0] + I_UB_R * B_r_1d[:] / dVec[0] - (1 - I_LB_R - I_UB_R) * np.abs(B_r_1d[:]) / dVec[0] + I_LB_F * B_f_1d[:] / -dVec[1] + I_UB_F * B_f_1d[:] / dVec[1] - (1 - I_LB_F - I_UB_F) * np.abs(B_f_1d[:]) / dVec[1] + I_LB_K * B_k_1d[:] / -dVec[2] + I_UB_K * B_k_1d[:] / dVec[2] - (1 - I_LB_K - I_UB_K) * np.abs(B_k_1d[:]) / dVec[2]
-        diag_R = I_LB_R * B_r_1d[:] / dVec[0] + (1 - I_LB_R - I_UB_R) * B_r_1d.clip(min=0.0) / dVec[0] + diag_R_base
-        diag_Rm = I_UB_R * B_r_1d[:] / -dVec[0] - (1 - I_LB_R - I_UB_R) * B_r_1d.clip(max=0.0) / dVec[0] + diag_Rm_base
+        diag_0 = diag_0_base - 1 / epsilon + I_LB_d * B_r_1d[:] / -dVec[0] + I_UB_R * B_r_1d[:] / dVec[0] - (1 - I_LB_d - I_UB_R) * np.abs(B_r_1d[:]) / dVec[0] + I_LB_F * B_f_1d[:] / -dVec[1] + I_UB_F * B_f_1d[:] / dVec[1] - (1 - I_LB_F - I_UB_F) * np.abs(B_f_1d[:]) / dVec[1] + I_LB_K * B_k_1d[:] / -dVec[2] + I_UB_K * B_k_1d[:] / dVec[2] - (1 - I_LB_K - I_UB_K) * np.abs(B_k_1d[:]) / dVec[2]
+        diag_R = I_LB_d * B_r_1d[:] / dVec[0] + (1 - I_LB_d - I_UB_R) * B_r_1d.clip(min=0.0) / dVec[0] + diag_R_base
+        diag_Rm = I_UB_R * B_r_1d[:] / -dVec[0] - (1 - I_LB_d - I_UB_R) * B_r_1d.clip(max=0.0) / dVec[0] + diag_Rm_base
         diag_F = I_LB_F * B_f_1d[:] / dVec[1] + (1 - I_LB_F - I_UB_F) * B_f_1d.clip(min=0.0) / dVec[1] + diag_F_base
         diag_Fm = I_UB_F * B_f_1d[:] / -dVec[1] - (1 - I_LB_F - I_UB_F) * B_f_1d.clip(max=0.0) / dVec[1] + diag_Fm_base
         diag_K = I_LB_K * B_k_1d[:] / dVec[2] + (1 - I_LB_K - I_UB_K) * B_k_1d.clip(min=0.0) / dVec[2] + diag_K_base
@@ -594,7 +588,7 @@ for key in dir():
         pass
 
 
-file = open("../data/PostJump/" + filename, 'wb')
+file = open("../data/PostJump/" + dirname + "/" + filename, 'wb')
 pickle.dump(my_shelf, file)
 file.close()
 

@@ -3,7 +3,7 @@
 import os
 import sys
 import csv
-sys.path.append('./src')
+sys.path.append('../src')
 from supportfunctions import *
 sys.stdout.flush()
 import petsc4py
@@ -72,9 +72,9 @@ Y_min = 0.
 Y_max = 4.
 # range of capital
 Kd_min = 600
-Kd_max = 5000.
+Kd_max = 10000.
 Kg_min = 600.
-Kg_max = 5000.
+Kg_max = 10000.
 
 # hR = 0.05
 hY  = 0.2 # make sure it is float instead of int
@@ -222,8 +222,8 @@ while FC_Err > tol and epoch < max_iter:
     # i_d = (1 / 8 - np.sqrt(0.68) / 8) * np.ones(Kd_mat.shape)
     # i_g = (1 / 8 - np.sqrt(0.68) / 8) * np.ones(Kg_mat.shape)
 
-    # i_d = np.zeros(Kd_mat.shape)
-    # i_g = np.zeros(Kg_mat.shape)
+    i_d = np.zeros(Kd_mat.shape)
+    i_g = np.zeros(Kg_mat.shape)
     # i_d[i_d <= 1e-15] = 1e-15
     # i_g[i_g <= 1e-15] = 1e-15
     # i_g[i_g > A_g - 1e-15] = A_g - 1e-15
@@ -499,7 +499,7 @@ print("--- Total running time: %s seconds ---" % (time.time() - start_time))
 
 
 
-exit()
+# exit()
 
 import pickle
 # filename = filename
