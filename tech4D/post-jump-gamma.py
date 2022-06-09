@@ -115,7 +115,7 @@ upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
 import pickle
-data = pickle.load(open("../data/PostJump/eta_0.0500/Ag-0.15-gamma-0.1852-08-16:40", "rb"))
+data = pickle.load(open("../data/PostJump/eta_0.0500/Ag-0.15-gamma-0.2222-09-11:47", "rb"))
 v0 = data["v0"]
 ############# step up of optimization
 FC_Err   = 1
@@ -256,7 +256,7 @@ while FC_Err > tol and epoch < max_iter:
     if multi_2.any() <= 0:
         import pdb; pdb.set_trace()
 
-    multi_2[multi_2 <= 0.01] = 0.01
+    multi_2[multi_2 <= 0.05] = 0.05
 
     aa = (1 - multi_1 / multi_2) / phi_d
     bb = phi_g / phi_d * multi_1 / multi_2
