@@ -19,20 +19,20 @@ The basic idea is to create a virtual OS environment either by using the standar
 3. Through virtual box create a virtual machine for a Linux OS. Make sure to leave enough space for the virtual machine i.e. when prompted assign 30GB rather than the default 8GB of disk space and assign at least 8GB (8192 MB) of RAM.
 4. In terminal run: 
 
-  `$ sudo apt-get install build-essential`
+  `sudo apt-get install build-essential`
 
   this will install a `C++` compiler and other essentials
 
 5. In terminal run: 
 
-  `$ sudo apt-get install gfortran`
+  `sudo apt-get install gfortran`
 
   this will install a `FORTRAN` compiler.
 
 6. Install `Cython` - `Python` bindings for `C`. This can be done in 2 ways:
     - Installing the `Cython` [package](https://cython.readthedocs.io/en/stable/src/quickstart/install.html) directly with
 
-    `$ pip install Cython` 
+    `pip install Cython` 
     - Installing `Anaconda` which contains `Cython` within the standard distribution. Installing `Anaconda` has advantages. It's a complete package management system which provide all necessary libraries and/or packages for scientific computing. `Anaconda` does not replace the default package manager `pip` but rather complements it and allows for environment management i.e. creating different workspaces containing different `Python` packages to enable easy testing, backwards compatibility checks, and resolution of package dependency issues. I user friendly installation tutorial on Ubuntu can be found [here](https://phoenixnap.com/kb/how-to-install-anaconda-ubuntu-18-04-or-20-04).
 
 7. Follow the instructions on `Python` bindings [below](#python_bindings). 
@@ -61,15 +61,18 @@ To run PETSc with `Python` we also need `Python` bindings provided by the `petsc
 1. For maintainance convenience, choose a name for the arch you will be configuring. In the folder where PETSc download folder run the following configuration command:
 
 ```
- ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-petsc4py --with-debugging=no PETSC_ARCH=yourchoiceofarchname`
+ ./configure --with-cc=gcc --with-cxx=g++ --with-fc=gfortran --download-mpich --download-fblaslapack --with-petsc4py --with-debugging=no PETSC_ARCH=<YourChoiceOfArchName>
 ```
+> **_Note:_** `mpi` is not absolute necessary at the moment. If mpich takes up a long time to download, or it runs into ERROR message, you can choose to disable to download option by changing the flag `--download-mpich` to `--with-mpi=0`
+
+
 Following the steps suggested by the configuration output:
 ```
-make PETSC_ARCH=yourchoiceofarchname all
+make PETSC_ARCH=<YourChoiceOfArchName> all
 ```
 And complete the make check following the instruction
 ```
-make PETSC_ARCH=yourchoiceofarchname check
+make PETSC_ARCH=<YourChoiceOfArchName> check
 ```
 
 
@@ -81,14 +84,15 @@ echo exit | strace bash -li |& grep '^open'
 
 The output will tell you whether `~/.bashrc` and/or `~/.bash_profile` and/or `~/.profile` are loaded.
 Suppose `~/.bashrc` are load when you start a bash session. Use the following command to store the environmental variables.
+If multiple files show up, choose any of the files and add the following to the file.
+For instance, if `~/.bashrc` shows up, use the following command:
 
 ```
-  echo 'export PETSC_DIR=/path/to/petsc' >> ~/.bashrc
-  echo 'export PETSC_ARCH=yourchoiceofarchname' >> ~/.bashrc
+  echo 'export PETSC_DIR=</path/to/petsc>' >> ~/.bashrc
+  echo 'export PETSC_ARCH=<YourChoiceOfArchName>' >> ~/.bashrc
   echo `export PYTHONPATH=$PETSC_DIR/$PETSC_ARCH/lib` >> ~/.bashrc
 ```
 
-Make sure to change the environment variables `PETSC_DIR` and `PETSC_ARCH` to the ones obtained from the configuration command above (they are printed out on the terminal feed).
 
 3. Check if the configuration is successful: 
 ```
