@@ -114,9 +114,9 @@ upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
-# import pickle
-# data = pickle.load(open("../data/PostJump/Ag-0.15-gamma-0.037037037037037035-07-14:35", "rb"))
-# v0 = data["v0"]
+import pickle
+data = pickle.load(open("../data/PostJump/eta_0.0500/Ag-0.15-gamma-0.1852-08-16:40", "rb"))
+v0 = data["v0"]
 ############# step up of optimization
 FC_Err   = 1
 epoch    = 0
@@ -163,8 +163,8 @@ max_iter = 10000
 
 id_star = np.zeros_like(K_mat)
 ig_star = np.zeros_like(K_mat)
-# id_star = data["id_star"]
-# ig_star = data["ig_star"]
+id_star = data["id_star"]
+ig_star = data["ig_star"]
 
 continue_mode = True
 
@@ -256,7 +256,7 @@ while FC_Err > tol and epoch < max_iter:
     if multi_2.any() <= 0:
         import pdb; pdb.set_trace()
 
-    multi_2[multi_2 <= 0.0001] = 0.0001
+    multi_2[multi_2 <= 0.01] = 0.01
 
     aa = (1 - multi_1 / multi_2) / phi_d
     bb = phi_g / phi_d * multi_1 / multi_2
