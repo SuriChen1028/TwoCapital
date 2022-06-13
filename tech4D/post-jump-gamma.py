@@ -1,3 +1,8 @@
+"""
+post-jump-gamma.py
+========================
+This file is used to solve post damage, post technology jump HJB models with different damage function realizations.
+"""
 # Optimization of post jump HJB
 #Required packages
 import os
@@ -17,11 +22,11 @@ from solver import solver_3d
 import argparse
 import pdb
 
-parser = argparse.ArgumentParser(description="Set damage curvature value.")
-parser.add_argument("--gamma", type=int, help="Value of gamma_3")
-parser.add_argument("--eta", type=float, help="Value of eta", default=0.17)
-parser.add_argument("--epsilon", type=float, help="Value of epsilon", default=0.1)
-parser.add_argument("--fraction", type=float, help="Value of fraction of control update", default=0.1)
+parser = argparse.ArgumentParser(description="Set damage curvature value, and hyper parameters for the optimization problem.")
+parser.add_argument("--gamma", type=int, help="Index number of gamma_3 in the list of gamma_3 values. By default, we are solving with 10 damage function, then the value could be 0,1,...,9.", default=0)
+parser.add_argument("--eta", type=float, help="Value of eta, default = 0.17", default=0.17)
+parser.add_argument("--epsilon", type=float, help="Value of epsilon, default = 0.1", default=0.1)
+parser.add_argument("--fraction", type=float, help="Value of fraction of control update, default = 0.1", default=0.1)
 parser.add_argument("--keep-log", default=False, action="store_true", help="Flag to keep a log of the computation")
 args = parser.parse_args()
 

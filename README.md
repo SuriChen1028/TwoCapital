@@ -140,7 +140,15 @@ available solution:
 
 
 
-`post-jump-gamma.py` corresponds to section 1.2.1 in `write-up.pdf` with state variables log K, R, Y
+`post-jump-gamma.py` corresponds to section 1.2.1 in `write-up.pdf` with state variables log K, R, Y.
+The file is used together with several flags. Enter the following command for more details:
+```
+python post-jump-gamma.py -h
+```
+The default settigs are
+```
+python post-jump-gamma.py --gamma 0 --eta 0.17 --epsilon 0.1 --fraction 0.1
+```
 
 `HJB-4d-logL.py` corresponds to section 2 Pre jump HJB in `write-up.pdf`
 
