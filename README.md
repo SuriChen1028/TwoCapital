@@ -105,16 +105,25 @@ to see if the outputs are correct. and
 ```
 pip list
 ```
+or
+```
+pip3 list
+```
 to see if `petsc4py` has been installed successfully.
 
 
 
 ## Install the linear solver and other necessary packages
 
-
-- `pip install -r requirements.txt`
-- To use C implementation `pip install ./src/linearsystemcore`
-- (Optional) installation of `SolveLinSys` package `pip install ./src/cppcore`
+- For UNIX-like OS users, use `install.sh` to install necessary packages:
+```
+chmod +x install.sh
+```
+```
+./install.sh
+```
+The file installs `eigen3` solver and `PETSc` solver.
+- (Optional) installation of `SolveLinSys`: answer "y" to the question *Do you want to install eigen3 solver?*
 
 ## Scripts and Model
 

@@ -68,10 +68,10 @@ beta_f = 1.86 / 1000
 # Grids Specification
 # Coarse Grids
 Y_min = 1e-8
-Y_max = 3.00
+Y_max = 2.50
 # range of capital
 K_min = 4.00
-K_max = 8.50
+K_max = 7.50
 R_min = 0.14
 R_max = 0.99
 hK = 0.10
@@ -115,7 +115,7 @@ upperLims = np.array([K_max, R_max, Y_max], dtype=np.float64)
 
 v0 = K_mat - (gamma_1 + gamma_2 * Y_mat)
 import pickle
-data = pickle.load(open("../data/PostJump/eta_0.0500/Ag-0.15-gamma-0.2222-09-11:47", "rb"))
+data = pickle.load(open("../data/PostJump/eta_0.0500/Ag-0.15-gamma-0.3333-10-12:45", "rb"))
 v0 = data["v0"]
 ############# step up of optimization
 FC_Err   = 1
