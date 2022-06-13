@@ -109,7 +109,7 @@ or
 ```
 pip3 list
 ```
-to see if `petsc4py` has been installed successfully.
+to see if `petsc4py` and `petsclinearsystem` has been installed successfully.
 
 
 
@@ -127,6 +127,8 @@ The file installs `eigen3` solver and `PETSc` solver.
 
 ## Scripts and Model
 
+## The Project for R&D model are stored under `./tech4D/` folder.
+
 A write-up is under the `./write-ups/write-up.pdf`
 
 In py file, `linearsolver` stands for the linear solver to use: 
@@ -134,12 +136,12 @@ available solution:
 
 - `pestsc` for PETSc + C implementation of coefficient matrix
 - `petsc4py` for PETSc and numpy sparse matrix
-- `eigen` for `SolveLinSys`
+- `eigen3` for `SolveLinSys`
 
 
 
-`./post-jump/post-jump-change.py` corresponds to section 1.2.1 in `write-up.pdf` with state variables log K, R, Y
+`post-jump-gamma.py` corresponds to section 1.2.1 in `write-up.pdf` with state variables log K, R, Y
 
-`./tech4D/HJB-4d.py` corresponds to section 2 Pre jump HJB in `write-up.pdf`
+`HJB-4d-logL.py` corresponds to section 2 Pre jump HJB in `write-up.pdf`
 
-
+## The Project for non-linear carbon and temperature dynamics are stored under `./nonlinearCarbon/` folder.
