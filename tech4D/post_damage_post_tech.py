@@ -44,6 +44,8 @@ linearsolver = 'petsc'
 
 
 start_time = time.time()
+# Uncertainty parameters
+xi_a = 100. # Smooth ambiguity
 # Parameters as defined in the paper
 delta = 0.01
 A_d = 0.12
@@ -67,32 +69,33 @@ gamma_2 = 2. * 0.0022
 gamma_3_list = np.linspace(0., 1./3., 10)
 gamma_3 = gamma_3_list[args.gamma]
 
-y_bar = 2
-beta_f = 1.86 / 1000
+y_bar     = 2.
+beta_f    = 1.86 / 1000
+theta_ell = pd.read_csv("../data/model144.csv", header=None).to_numpy()[:,0]/1000.
+pi_c_o    = np.ones_like(theta_ell)/len(theta_ell)
+sigma_y   = 1.2 * np.mean(theta_ell)
 
 # Grids Specification
 # Coarse Grids
-Y_min = 1e-8
-Y_max = 2.50
 # range of capital
-K_min = 4.00
-K_max = 7.50
-R_min = 0.14
-R_max = 0.99
-hK = 0.10
-hR = 0.01
-hY = 0.05 # make sure it is float instead of int
+K_min     = 4.00
+K_max     = 7.50
+R_min     = 0.14
+R_max     = 0.99
+Y_min     = 1e-8
+Y_max     = 2.50
+hK        = 0.10
+hR        = 0.01
+hY        = 0.05 # make sure it is float instead of int
 
-# R = np.arange(R_min, R_max + hR, hR)
-# nR = len(R)
-K = np.arange(K_min, K_max + hK, hK)
-nK = len(K)
-R = np.arange(R_min, R_max + hR, hR)
-nR = len(R)
-Y = np.arange(Y_min, Y_max + hY, hY)
-nY = len(Y)
+K         = np.arange(K_min, K_max + hK, hK)
+nK        = len(K)
+R         = np.arange(R_min, R_max + hR, hR)
+nR        = len(R)
+Y         = np.arange(Y_min, Y_max + hY, hY)
+nY        = len(Y)
 
-now = datetime.now()
+now       = datetime.now()
 current_time = now.strftime("%d-%H:%M")
 
 dirname  = "eta_{:.4f}".format(eta)
@@ -173,17 +176,7 @@ ig_star = data["ig_star"]
 
 continue_mode = True
 
-# file_iter = open("iter_c_compile.txt", "w")
 
-# res = solver_3d(K_mat, R_mat, Y_mat, # FOC_func, Coeff_func,  
-        # args=(delta, eta, A_d, A_g, alpha_d, alpha_g, sigma_d, sigma_g, phi_d, phi_g, gamma_1, \
-            # gamma_2, y_bar, varphi, varsigma, beta_f ),
-        # linearsolver="petsc",
-        # reporterror=True,
-        # v0=v0, tol=1e-6, max_iter=10000, epsilon=0.1, fraction=0.5,
-        # saveRes=True)
-
-# exit()
 
 while FC_Err > tol and epoch < max_iter:
     print("-----------------------------------")
@@ -230,11 +223,8 @@ while FC_Err > tol and epoch < max_iter:
             i_d = 1 -  mc / (dK - R_mat *  dR)
             i_d /= phi_d
             i_d[i_d < 0] = 0
-            # i_d[i_d > A_d] = A_d
             i_g = 1 - mc / (dK + (1 - R_mat) * dR)
             i_g /= phi_g
-            # i_g[i_g < 0] = 0
-            # i_g[i_g > A_g] = A_g
             q = delta * ((A_g * R_mat - i_g * R_mat) + (A_d * (1 - R_mat) - i_d * (1 - R_mat))) ** (-1)
         # DELTA = np.zeros_like(K_mat)
 
@@ -261,7 +251,7 @@ while FC_Err > tol and epoch < max_iter:
     if multi_2.any() <= 0:
         import pdb; pdb.set_trace()
 
-    multi_2[multi_2 <= 0.05] = 0.05
+    multi_2[multi_2 <= 0.01] = 0.01
 
     aa = (1 - multi_1 / multi_2) / phi_d
     bb = phi_g / phi_d * multi_1 / multi_2
@@ -282,47 +272,13 @@ while FC_Err > tol and epoch < max_iter:
 
     i_d = i_d_new * fraction + id_star * (1 - fraction)
     i_g = i_g_new * fraction + ig_star * (1 - fraction)
-    # ########## Updating mc ###################################
-     # # updating controls
-        # Converged = 0
-        # num = 0
-
-        # while Converged == 0 and num < 5000:
-            # i_g_1 = (1 - q / (dR * (1 - R_mat) + dK )) / phi_g
-            # i_d_1 = (1 - q / (-dR * R_mat + dK)) / phi_d
-            # # i_d_1[i_d_1 >= A_d - 1e-15] = A_d - 1e-15
-            # # i_g_1[i_g_1 >= A_g - 1e-15] = A_g - 1e-15
-            # i_d_1[i_d_1 <= 1e-15] = 1e-15
-            # # i_g_1[i_g_1 <= 1e-15] = 1e-15
-
-            # if np.max(abs(i_g_1 - i_g)) <= 1e-12 and np.max(abs(i_d_1 - i_d)) <= 1e-12:
-                # Converged = 1
-                # i_g = i_g_1
-                # i_d = i_d_1
-            # else:
-                # i_g = i_g_1
-                # i_d = i_d_1
-                # q = delta * (
-                    # (A_g * R_mat - i_g * R_mat) + (A_d * (1-R_mat) - i_d * (1-R_mat))) ** (-1) * fraction + (1 - fraction) * q
-                # q[q <= 1e-16] = 1e-16
-            # num += 1
-            # # print(num)
-        # print(np.max(abs(i_g_1 - i_g)) , np.max(abs(i_d_1 - i_d)))
-
-        # print(diff)
     print("Before 1e-14 constraint:")
     print("id min: {}\t; id max: {}\t".format(np.min(i_d), np.max(i_d)))
     print("ig min: {}\t; ig max: {}\t".format(np.min(i_g), np.max(i_g)))
-    # i_d = np.zeros(K_mat.shape)
-    # i_g = np.zeros(R_mat.shape)
     i_d_min_new = i_d.min()
     i_d[i_d >= 1 / phi_d - 1e-14] = 1 / phi_d - 1e-14
     i_g[i_g >= 1 / phi_g - 1e-14] = 1 / phi_g - 1e-14
 
-    # i_d[i_d <= 1e-14] = 1e-14
-    # i_g[i_g <= 1e-14] = 1e-14
-    # i_d[i_d >= A_d - 1e-14] = A_d - 1e-14
-    # i_g[i_g >= A_g - 1e-14] = A_g - 1e-14
     print("After 1e-14 constraint:")
     print("min id: {:.12f};\t max ig: {:.12f}\t".format(np.min(i_d), np.min(i_g)) )
     print("max id: {:.12f};\t max ig: {:.12f}\t".format(np.max(i_d), np.max(i_g)))
@@ -331,7 +287,6 @@ while FC_Err > tol and epoch < max_iter:
     print("min consum: {:.12f};\t max consum: {:.12f}\t".format(np.min(consumption), np.max(consumption)))
 
     # Step (2), solve minimization problem in HJB and calculate drift distortion
-    # See remark 2.1.3 for more details
     start_time2 = time.time()
     if epoch == 0:
         dVec = np.array([hK, hR, hY])
