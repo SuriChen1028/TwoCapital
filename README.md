@@ -92,7 +92,13 @@ For instance, if `~/.bashrc` shows up, use the following command:
   echo 'export PETSC_ARCH=<YourChoiceOfArchName>' >> ~/.bashrc
   echo `export PYTHONPATH=$PETSC_DIR/$PETSC_ARCH/lib` >> ~/.bashrc
 ```
+If `~/.bashrc` does not show up and `~/.bash_profile` shows up instead, replace the `~/.bashrc` above with `~/.bash_profile` or `~/.profile`:
 
+```
+  echo 'export PETSC_DIR=</path/to/petsc>' >> ~/.bash_profile
+  echo 'export PETSC_ARCH=<YourChoiceOfArchName>' >> ~/.bash_profile
+  echo `export PYTHONPATH=$PETSC_DIR/$PETSC_ARCH/lib` >> ~/.bash_profile
+```
 
 3. Check if the configuration is successful: 
 ```
