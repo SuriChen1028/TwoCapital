@@ -145,6 +145,21 @@ The file is used together with several flags. Enter the following command for mo
 ```
 python post-jump-gamma.py -h
 ```
+It would print out the following info:
+```
+usage: post-jump-gamma.py [-h] [--gamma GAMMA] [--eta ETA] [--epsilon EPSILON] [--fraction FRACTION] [--keep-log]
+
+Set damage curvature value, and hyper parameters for the optimization problem.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --gamma GAMMA        Index number of gamma_3 in the list of gamma_3 values. By default, we are solving with 10 damage function, then the value could be 0,1,...,9.
+  --eta ETA            Value of eta, default = 0.17
+  --epsilon EPSILON    Value of epsilon, default = 0.1
+  --fraction FRACTION  Value of fraction of control update, default = 0.1
+  --keep-log           Flag to keep a log of the computation
+```
+
 The default settigs are
 ```
 python post-jump-gamma.py --gamma 0 --eta 0.17 --epsilon 0.1 --fraction 0.1
