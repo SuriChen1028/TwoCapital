@@ -101,13 +101,17 @@ echo $PETSC_DIR
 echo $PETSC_ARCH
 echo $PYTHONPATH
 ```
-to see if the outputs are correct. and
+to see if the outputs are correct. They should provide you with what you entered in step 2 above.
+
+Enter the following commmand to see if Python packages are successfully installed:
 ```
-pip list
+pip list | grep petsc4py
+pip list | grep petsclinearsystem
 ```
 or
 ```
-pip3 list
+pip3 list | grep petsc4py
+pip3 list | grep petsclinearsystem
 ```
 to see if `petsc4py` and `petsclinearsystem` has been installed successfully.
 
