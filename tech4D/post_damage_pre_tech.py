@@ -29,6 +29,7 @@ parser.add_argument("--eta", type=float, help="Value of eta, default = 0.17", de
 parser.add_argument("--epsilon", type=float, help="Value of epsilon, default = 0.1", default=0.1)
 parser.add_argument("--fraction", type=float, help="Value of fraction of control update, default = 0.1", default=0.1)
 parser.add_argument("--keep-log", default=False, action="store_true", help="Flag to keep a log of the computation")
+parser.add_argument("--subset-climate", action="store_true", help="Flag to use only subset of 144 climate sensitivity parameters")
 args = parser.parse_args()
 
 
@@ -41,10 +42,10 @@ reporterror = True
 # both: petsc+petsc4py
 #
 linearsolver = 'petsc4py'
-current_time = datetime.now()
+now          = datetime.now()
+current_time = now.strftime("%d-%H:%M")
 
-
-print("Script starts: {:d}/{:d}-{:d}:{:d}".format(current_time.month, current_time.day, current_time.hour, current_time.minute))
+print("Script starts: {:d}/{:d}-{:d}:{:d}".format(now.month, now.day, now.hour, now.minute))
 print("Linear solver: " + linearsolver)
 
 
@@ -53,8 +54,8 @@ xi_a = 100.
 xi_g = 100.
 
 gamma_3_list = np.linspace(0., 1./3., 10)
-gamma_3 = gamma_3_list[args.gamma]
-eta = args.eta
+gamma_3      = gamma_3_list[args.gamma]
+eta          = args.eta
 # Parameters as defined in the paper
 dirname = "../data/PostJump/eta_{:.4f}/".format(eta)
 with open(dirname + "Ag-0.15-gamma-{:.4f}".format(gamma_3), "rb") as f:
@@ -73,16 +74,20 @@ sigma_g = postjump["sigma_g"]
 varsigma = postjump["varsigma"]
 # beta_f = postjump["beta_f"]
 beta_f = pd.read_csv("../data/model144.csv", header=None).to_numpy()[:, 0]/1000.
+# Choose subset of parameters
+if args.subset_climate:
+    beta_f = beta_f[[0, 35, 71, 107, 143]]
+    
 # beta_f = np.mean(beta_f)
 phi_d = postjump["phi_d"]
 phi_g = postjump["phi_g"]
 ########## arrival rate
 # varphi = postjump["varphi"]
-varphi  = 0.010
+varphi  = 0.001
 sigma_l = 0.016
 alpha_l = 0.000
 ########## Scaling factor
-eta = postjump["eta"]
+# eta = postjump["eta"]
 
 # Grids Specification
 
@@ -105,24 +110,24 @@ Temp     = postjump["Y"]
 v_post   = postjump["v0"]
 
 # log of jump intensity, log lambda
-logL_min = - 4.
-logL_max = 0.
-hL       = 0.5
-logL     = np.arange(logL_min, logL_max, hL)
+L_min = - 4.
+L_max = 0.
+hL    = 0.5
+L     = np.arange(L_min, L_max, hL)
 
 X = K[10:]
 Y = R[:-40]
 Z = Temp[:]
-W = logL
+W = L
 
 ###### damage
 gamma_1 = postjump["gamma_1"]
 gamma_2 = postjump["gamma_2"]
-gamma_3 = postjump["gamma_3"]
+# gamma_3 = postjump["gamma_3"]
 y_bar   = 2.
 
 # if os.path.exists(dirname)
-filename =  "varphi-" + str(varphi) +"-gamma-{:.4f}".format(gamma_3) + "-{}".format(current_time)
+filename =  "post_damage_pre_tech-" + "varphi-" + str(varphi) +"-gamma-{:.4f}".format(gamma_3) + "-{}".format(current_time)
 
 hX    = X[1] - X[0]
 nX    = len(X)
@@ -152,7 +157,7 @@ stateSpace = np.hstack([X_mat.reshape(-1,1,order = 'F'), Y_mat.reshape(-1,1,orde
 K_mat    = X_mat
 R_mat    = Y_mat
 Temp_mat = Z_mat
-logL_mat = W_mat
+L_mat    = W_mat
 
 print(X_mat.shape)
 # For PETSc
@@ -174,7 +179,7 @@ theta_ell = np.array([temp * np.ones_like(K_mat) for temp in beta_f])
 pi_c_o = np.ones((len(beta_f), nX, nY, nZ, nW)) / len(beta_f)
 pi_c = pi_c_o.copy()
 
-# with open("./data/PreJump/varphi_0.05/varphi-0.05-gamma0.0-Agp-0.15-29-21-13", "rb") as f:
+# with open("../data/PostJump/eta_0.0500/post_damage_pre_tech-varphi-0.01-gamma-0.0000-2022-06-14 10:36:58.374606", "rb") as f:
     # data = pickle.load(f)
 # v0 = data["v0"]
 # v0 = V_post
@@ -185,8 +190,8 @@ continue_mode = False
 FC_Err   = 1
 epoch    = 0
 tol      = 1e-6
-epsilon  = 0.003
-fraction = 0.5
+epsilon  = 0.01
+fraction = 0.01
 max_iter = 4000
 
 # Emission proportional to dirty capital
@@ -215,7 +220,7 @@ while  FC_Err > tol and epoch < max_iter:
     dTemp = dZ
     dW = finiteDiff(v0,3,1,hW)
     dW[dW <= 1e-5] = 1e-5
-    dLam = dW
+    dL = dW
     ######## second order
     ddX = finiteDiff(v0,0,2,hX)
     ddY = finiteDiff(v0,1,2,hY)
@@ -237,7 +242,7 @@ while  FC_Err > tol and epoch < max_iter:
         i_g = 1 / phi_g - mc / phi_g / (dK + (1 - R_mat) * dR)
         i_g_min = i_g.min()
         i_g_max = i_g.max()
-        # i_l = (A_d - i_d ) * (1 - R_mat) + (A_g - i_g) * R_mat - delta / (np.exp(K_mat) * varphi * dLam)
+        # i_l = (A_d - i_d ) * (1 - R_mat) + (A_g - i_g) * R_mat - delta / (np.exp(K_mat) * varphi * dL)
         # i_l = 1e-15 * np.ones(X_mat.shape)
         i_l = np.zeros(X_mat.shape)
         i_l_min = i_l.min()
@@ -251,26 +256,23 @@ while  FC_Err > tol and epoch < max_iter:
             i_l = data["i_l"]
 
     else:
-        # pass
-        # i_d = (1 / 8 - np.sqrt(0.678) / 8) * np.ones(K_mat.shape) + 0.00001
-        # i_g = (1 / 8 - np.sqrt(0.678) / 8) * np.ones(K_mat.shape) + 0.00001
-        mc = np.exp(K_mat-logL_mat) * varphi * dLam
+        mc = np.exp(K_mat-L_mat) * varphi * dL
         mc_min = mc.min()
         mc_max = mc.max()
 
-        i_d = 1 / phi_d - varphi * dLam * np.exp(K_mat)  /np.exp(logL_mat) / phi_d / (dK - R_mat * dR)
+        i_d = 1 / phi_d - varphi * dL * np.exp(K_mat - L_mat) / phi_d / (dK - R_mat * dR)
         i_d = i_d * fraction + id_star * (1. - fraction)
         i_d_min = i_d.min()
         i_d_max = i_d.max()
         # i_d[i_d > A_d - 1e-16 ] = A_d - 1e-16
         # i_d[i_d <  0.00] =  0.000
-        i_g = 1 / phi_g - varphi * dLam  * np.exp(K_mat) /np.exp(logL_mat)/ phi_g / (dK + (1 - R_mat) * dR)
+        i_g = 1 / phi_g - varphi * dL  * np.exp(K_mat - L_mat)/ phi_g / (dK + (1 - R_mat) * dR)
         i_g = i_g * fraction + ig_star * (1. - fraction)
         i_g_min = i_g.min()
         i_g_max = i_g.max()
         # i_g[i_g > A_g  - 1e-16] = A_g - 1e-16
         # i_g[i_g <  0.000] = 0.0
-        temp = (A_d - i_d ) * (1 - R_mat) + (A_g - i_g) * R_mat  - delta / (np.exp(K_mat - logL_mat) * varphi * dLam)
+        temp = (A_d - i_d ) * (1 - R_mat) + (A_g - i_g) * R_mat  - delta / (np.exp(K_mat - L_mat) * varphi * dL)
         # temp[ temp < 0.000 ] = 0.000
         # temp[ temp > A_g - 1e-15] = A_g - 1e-15
         i_l =  temp
@@ -307,7 +309,7 @@ while  FC_Err > tol and epoch < max_iter:
         dVec = np.array([hX, hY, hZ, hW])
         increVec = np.array([1, nX, nX * nY, nX * nY * nZ], dtype=np.int32)
         # These are constant
-        A = - delta * np.ones(K_mat.shape)  - np.exp(logL_mat) * gg
+        A = - delta * np.ones(K_mat.shape)  - np.exp(L_mat) * gg
         C_11 = 0.5 * (sigma_d * (1 - R_mat) + sigma_g * R_mat)**2
         C_22 = 0.5 * R_mat**2 * (1 - R_mat)**2 * (sigma_d + sigma_g)**2
         C_33 = 0.5 * (varsigma * ee)**2
@@ -370,7 +372,7 @@ while  FC_Err > tol and epoch < max_iter:
     B_1 = mu_d * (1 - R_mat) + mu_g * R_mat - C_11
     B_2 = (mu_g - mu_d - R_mat * sigma_g**2 + (1 - R_mat) * sigma_d**2) * R_mat * (1 - R_mat)
     temp2 =  (A_d - i_d ) * (1 - R_mat)  + (A_g - i_g) * R_mat
-    B_4 =  varphi * temp2 * np.exp(K_mat - logL_mat) - alpha_l - 0.5 * sigma_l**2
+    B_4 =  varphi * temp2 * np.exp(K_mat - L_mat) - alpha_l - 0.5 * sigma_l**2
 
     consumption = (A_d - i_d) * (1 - R_mat)  +  (A_g - i_g) * R_mat  - i_l
     consumption_min = consumption.min()
@@ -378,7 +380,7 @@ while  FC_Err > tol and epoch < max_iter:
     print("max consum: {},\t min consum: {}\t".format(np.max(consumption), np.min(consumption)))
     consumption[consumption <= 1e-14] = 1e-14
 
-    D = delta * np.log(consumption) + delta * K_mat - delta - dG * np.sum(theta_ell * pi_c, axis=0) * ee  - 0.5 * ddG * (varsigma * ee)**2 + gg * np.exp(logL_mat) * V_post + xi_g * (1 - gg + gg * np.log(gg)) + xi_a * entropy
+    D = delta * np.log(consumption) + delta * K_mat - delta - dG * np.sum(theta_ell * pi_c, axis=0) * ee  - 0.5 * ddG * (varsigma * ee)**2 + gg * np.exp(L_mat) * V_post + xi_g * np.exp(L_mat) * (1 - gg + gg * np.log(gg)) + xi_a * entropy
 
     if linearsolver == 'eigen' or linearsolver == 'both':
         start_eigen = time.time()
@@ -389,7 +391,7 @@ while  FC_Err > tol and epoch < max_iter:
             v = np.array(out_eigen[2])
             res = np.linalg.norm(out_eigen[3].dot(v) - out_eigen[4])
             print("Eigen residual norm: {:g}; iterations: {}".format(res, out_eigen[0]))
-            PDE_rhs = A * v0 + B_1 * dX + B_2 * dY + B_3 * dY + C_11 * ddX + C_22 * ddY + C_33 * ddY + D
+            PDE_rhs = A * v0 + B_1 * dX + B_2 * dY + B_3 * dZ + B_4 * dW + C_11 * ddX + C_22 * ddY + C_33 * ddZ + C_44 * ddW + D
             PDE_Err = np.max(abs(PDE_rhs))
             FC_Err = np.max(abs((out_comp - v0)/ epsilon))
             print("Episode {:d} (Eigen): PDE Error: {:.10f}; False Transient Error: {:.10f}" .format(epoch, PDE_Err, FC_Err))
@@ -562,7 +564,7 @@ print("--- Total running time: %s seconds ---" % (time.time() - start_time))
 
 
 
-exit()
+# exit()
 
 import pickle
 # filename = filename

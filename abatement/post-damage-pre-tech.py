@@ -389,7 +389,7 @@ while FC_Err > tol and epoch < max_iter:
     B_2 = np.sum(theta_ell * pi_c, axis=0) * ee
     B_3 = - zeta + psi_0 * (xx * np.exp(K_mat - L_mat))**psi_1 - 0.5 * sigma_g**2
 
-    D = delta * np.log(consumption) + delta * K_mat  - dG * np.sum(theta_ell * pi_c, axis=0) * ee  - 0.5 * ddG * sigma_y**2 * ee**2 +  xi_g * np.exp(L_mat) * (1 - gg + gg * np.log(gg)) + np.exp(L_mat) * gg *(V_post)
+    D = delta * np.log(consumption) + delta * K_mat  - dG * np.sum(theta_ell * pi_c, axis=0) * ee  - 0.5 * ddG * sigma_y**2 * ee**2 +  xi_g * np.exp(L_mat) * (1 - gg + gg * np.log(gg)) + np.exp(L_mat) * gg *(V_post) + xi_a * entropy
 
     if linearsolver == 'eigen' or linearsolver == 'both':
         start_eigen = time.time()
