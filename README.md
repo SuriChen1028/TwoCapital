@@ -180,4 +180,4 @@ python post-jump-gamma.py --gamma 0 --eta 0.17 --epsilon 0.1 --fraction 0.1
 ## The Project for non-linear carbon and temperature dynamics are stored under [`./nonlinearCarbon/`](./nonlinearCarbon/) folder.
 
 
-## Earlier project of 3-D mitigation model is stored under [./abatement/](./abatement/) folder. 
+## Earlier project of 3-D mitigation model is stored under [./abatement/](./abatement/) folder. For more up-to-date version of the computation, go to [Mitigation](https://github.com/SuriChen1028/Mitigation).
