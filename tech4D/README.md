@@ -9,4 +9,5 @@ $\gamma_3$
 - [`Results.ipynb`](./Results.ipynb): contains simulation code for two capital, endogenized R&D investment model
 	- `simulate_post`: simulate trajectories for solutions from [`post_damage_post_tech.py`](./post_damage_post_tech.py)
 	- `simulate_pre`: simulate trajectories for solutions from [`post_damage_pre_tech.py`](./post_damage_pre_tech.py)
+- [Check.ipynb](./Check.ipynb) plots the results as surfaces to check the solutions.
 
