@@ -177,4 +177,7 @@ python post-jump-gamma.py --gamma 0 --eta 0.17 --epsilon 0.1 --fraction 0.1
 
 `HJB-4d-logL.py` corresponds to section 2 Pre jump HJB in `write-up.pdf`
 
-## The Project for non-linear carbon and temperature dynamics are stored under `./nonlinearCarbon/` folder.
+## The Project for non-linear carbon and temperature dynamics are stored under [`./nonlinearCarbon/`](./nonlinearCarbon/) folder.
+
+
+## Earlier project of 3-D mitigation model is stored under [./abatement/](./abatement/) folder. 

@@ -115,7 +115,7 @@ L_max = 0.
 hL    = 0.5
 L     = np.arange(L_min, L_max, hL)
 
-X = K[10:]
+X = K[:]
 Y = R[:-40]
 Z = Temp[:]
 W = L
@@ -171,7 +171,7 @@ upperLims = np.array([X_max, Y_max, Z_max, W_max], dtype=np.float64)
 
 v0 = np.zeros(X_mat.shape)
 for i in range(len(W)):
-    v0[:,:,:, i] = v_post[10:, :-40, :]
+    v0[:,:,:, i] = v_post[:, :-40, :]
 V_post = v0
 
 # expand theta_ell
@@ -179,19 +179,19 @@ theta_ell = np.array([temp * np.ones_like(K_mat) for temp in beta_f])
 pi_c_o = np.ones((len(beta_f), nX, nY, nZ, nW)) / len(beta_f)
 pi_c = pi_c_o.copy()
 
-# with open("../data/PostJump/eta_0.0500/post_damage_pre_tech-varphi-0.01-gamma-0.0000-2022-06-14 10:36:58.374606", "rb") as f:
-    # data = pickle.load(f)
-# v0 = data["v0"]
+with open("../data/PostJump/eta_0.1000/post_damage_pre_tech-varphi-0.001-gamma-0.0000-05-01:27", "rb") as f:
+    data = pickle.load(f)
+v0 = data["v0"]
 # v0 = V_post
-continue_mode = False
+continue_mode = True
 
 ############# step up of optimization
 
 FC_Err   = 1
 epoch    = 0
 tol      = 1e-6
-epsilon  = 0.01
-fraction = 0.01
+epsilon  = args.epsilon
+fraction = args.fraction
 max_iter = 4000
 
 # Emission proportional to dirty capital
@@ -282,7 +282,7 @@ while  FC_Err > tol and epoch < max_iter:
         i_l_min = i_l.min()
         i_l_max = i_l.max()
         # i_l[i_l > A_d - 1e-16] = A_d - 1e-16
-        # i_l[i_l < 0.0 ] = 0.0
+        # i_l[i_l < -1 ] = -1
         # i_l = np.zeros(X_mat.shape)
         # i_l = 1e-5 * np.ones(X_mat.shape)
 
